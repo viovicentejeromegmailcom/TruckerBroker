@@ -43,10 +43,16 @@ export async function sendVerificationEmail(email: string, token: string): Promi
           <h1>Welcome to LogisticsHub!</h1>
           <p>Thank you for registering with us. To activate your account, please click on the link below:</p>
           
-          <p><a href="${verifyUrl}">Click here to verify your account</a></p>
+          <p style="margin: 20px 0;">
+            <a href="${verifyUrl}" style="background-color: #0097FB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+              Verify Account
+            </a>
+          </p>
           
-          <p>Or copy and paste this URL into your browser:</p>
-          <p>${verifyUrl}</p>
+          <p>If the button doesn't work, copy and paste this URL into your browser:</p>
+          <p style="background-color: #f5f5f5; padding: 10px; word-break: break-all;">
+            <a href="${verifyUrl}" style="color: #0097FB;">${verifyUrl}</a>
+          </p>
           
           <p>This link will expire in 24 hours.</p>
           <p>If you did not register for an account, please ignore this email.</p>

@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,10 +34,15 @@ export default function TruckerRegistrationForm() {
             firstName: "",
             lastName: "",
             phone: "",
+            companyName: "",
             address: "",
             city: "",
             state: "",
             zip: "",
+            bir2303: "",
+            businessPermit: "",
+            insurance: "",
+            portPermit: "",
         },
     });
 
@@ -64,6 +70,24 @@ export default function TruckerRegistrationForm() {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
+
+                <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
+                </div>
+
+                <FormField
+                    control={form.control}
+                    name="companyName"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Company Name / LTFRB-Registered Name</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Enter company name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <FormField
@@ -180,7 +204,7 @@ export default function TruckerRegistrationForm() {
                     name="address"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Street Address</FormLabel>
+                            <FormLabel>Business Address</FormLabel>
                             <FormControl>
                                 <Input placeholder="123 Main St" {...field} />
                             </FormControl>
@@ -232,6 +256,66 @@ export default function TruckerRegistrationForm() {
                         )}
                     />
                 </div>
+
+                <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-lg font-medium text-gray-900">Legal & Compliance</h3>
+                </div>
+
+                <FormField
+                    control={form.control}
+                    name="bir2303"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>BIR 2303 Certificate</FormLabel>
+                            <FormControl>
+                                <Input type="file" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="businessPermit"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Business Permit</FormLabel>
+                            <FormControl>
+                                <Input type="file" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="insurance"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Insurance Coverage (Optional)</FormLabel>
+                            <FormControl>
+                                <Input type="file" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="portPermit"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Permit to Operate (PTO) - For port entry (Optional)</FormLabel>
+                            <FormControl>
+                                <Input type="file" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 <Button
                     type="submit"

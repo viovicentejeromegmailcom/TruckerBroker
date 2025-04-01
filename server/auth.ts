@@ -279,7 +279,8 @@ export function setupAuth(app: Express) {
         await storage.updateUser(user.id, {
           status: "approved",
           verificationToken,
-          verificationExpires: tokenExpires
+          verificationExpires: tokenExpires,
+          verificationNotes: "Approved by admin"
         });
 
         // Send verification email
@@ -293,7 +294,8 @@ export function setupAuth(app: Express) {
       } else {
         // If rejected, update user status (optional: could delete the user instead)
         await storage.updateUser(user.id, {
-          status: "rejected"
+          status: "rejected",
+          verificationNotes: message || "Rejected by admin"
         });
 
         // Send rejection email if a message was provided

@@ -1,13 +1,13 @@
-import { 
-  User, InsertUser, 
+import {
+  User, InsertUser,
   TruckerProfile, InsertTruckerProfile,
   BrokerProfile, InsertBrokerProfile,
   Job, InsertJob,
   Message, InsertMessage,
   Conversation, InsertConversation,
   Booking, InsertBooking,
-  users, truckerProfiles, brokerProfiles, jobs, 
-  conversations, messages, bookings 
+  users, truckerProfiles, brokerProfiles, jobs,
+  conversations, messages, bookings
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -27,24 +27,26 @@ export interface IStorage {
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
   getUsersByStatus(status: User['status']): Promise<User[]>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
-  
+  getAllUsers(): Promise<User[]>;
+  getApprovalHistory(): Promise<any[]>;
+
   // Trucker Profile operations
   getTruckerProfile(userId: number): Promise<TruckerProfile | undefined>;
   createTruckerProfile(profile: InsertTruckerProfile): Promise<TruckerProfile>;
   updateTruckerProfile(userId: number, profile: Partial<TruckerProfile>): Promise<TruckerProfile | undefined>;
-  
+
   // Broker Profile operations
   getBrokerProfile(userId: number): Promise<BrokerProfile | undefined>;
   createBrokerProfile(profile: InsertBrokerProfile): Promise<BrokerProfile>;
   updateBrokerProfile(userId: number, profile: Partial<BrokerProfile>): Promise<BrokerProfile | undefined>;
-  
+
   // Job operations
   getJob(id: number): Promise<Job | undefined>;
   getJobs(filters?: Partial<Job>): Promise<Job[]>;
   getJobsByBroker(brokerId: number): Promise<Job[]>;
   createJob(job: InsertJob): Promise<Job>;
   updateJob(id: number, job: Partial<Job>): Promise<Job | undefined>;
-  
+
   // Message & Conversation operations
   getConversation(id: number): Promise<Conversation | undefined>;
   getConversationByUsers(user1Id: number, user2Id: number): Promise<Conversation | undefined>;
@@ -53,14 +55,14 @@ export interface IStorage {
   getMessages(conversationId: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessagesAsRead(conversationId: number, userId: number): Promise<void>;
-  
+
   // Booking operations
   getBooking(id: number): Promise<Booking | undefined>;
   getBookingsByJob(jobId: number): Promise<Booking[]>;
   getBookingsByTrucker(truckerId: number): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: number, status: Booking['status']): Promise<Booking | undefined>;
-  
+
   // Session store
   sessionStore: any;
 }
@@ -70,11 +72,11 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     const PostgresSessionStore = connectPg(session);
-    
+
     // Create the session store
-    this.sessionStore = new PostgresSessionStore({ 
+    this.sessionStore = new PostgresSessionStore({
       pool: pool,
-      createTableIfMissing: true 
+      createTableIfMissing: true
     });
   }
 
@@ -88,7 +90,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
-  
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
@@ -98,30 +100,60 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
-  
+
   async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
     const [updated] = await db
-      .update(users)
-      .set(updates)
-      .where(eq(users.id, id))
-      .returning();
+        .update(users)
+        .set(updates)
+        .where(eq(users.id, id))
+        .returning();
     return updated;
   }
-  
+
   async getUsersByStatus(status: User['status']): Promise<User[]> {
     return await db
-      .select()
-      .from(users)
-      .where(eq(users.status, status))
-      .orderBy(users.createdAt);
+        .select()
+        .from(users)
+        .where(eq(users.status, status))
+        .orderBy(users.createdAt);
   }
-  
+
   async getUserByVerificationToken(token: string): Promise<User | undefined> {
     const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.verificationToken, token));
+        .select()
+        .from(users)
+        .where(eq(users.verificationToken, token));
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db
+        .select()
+        .from(users)
+        .orderBy(desc(users.createdAt));
+  }
+
+  async getApprovalHistory(): Promise<any[]> {
+    // This is a placeholder implementation
+    // You should create a proper schema for approval history in shared/schema.ts
+    // For now, we'll query users with status changes
+    return await db
+        .select({
+          id: users.id,
+          userName: users.username,
+          userEmail: users.email,
+          approved: users.status,
+          createdAt: users.updatedAt,
+          message: users.verificationNotes
+        })
+        .from(users)
+        .where(
+            or(
+                eq(users.status, "approved"),
+                eq(users.status, "rejected")
+            )
+        )
+        .orderBy(desc(users.updatedAt));
   }
 
   // Trucker Profile operations
@@ -140,10 +172,10 @@ export class DatabaseStorage implements IStorage {
     if (!profile) return undefined;
 
     const [updated] = await db
-      .update(truckerProfiles)
-      .set(updates)
-      .where(eq(truckerProfiles.id, profile.id))
-      .returning();
+        .update(truckerProfiles)
+        .set(updates)
+        .where(eq(truckerProfiles.id, profile.id))
+        .returning();
     return updated;
   }
 
@@ -163,10 +195,10 @@ export class DatabaseStorage implements IStorage {
     if (!profile) return undefined;
 
     const [updated] = await db
-      .update(brokerProfiles)
-      .set(updates)
-      .where(eq(brokerProfiles.id, profile.id))
-      .returning();
+        .update(brokerProfiles)
+        .set(updates)
+        .where(eq(brokerProfiles.id, profile.id))
+        .returning();
     return updated;
   }
 
@@ -178,7 +210,7 @@ export class DatabaseStorage implements IStorage {
 
   async getJobs(filters: Partial<Job> = {}): Promise<Job[]> {
     let query = db.select().from(jobs);
-    
+
     // Apply filters if any
     const conditions = [];
     for (const [key, value] of Object.entries(filters)) {
@@ -186,20 +218,20 @@ export class DatabaseStorage implements IStorage {
         conditions.push(eq(jobs[key as keyof typeof jobs], value));
       }
     }
-    
+
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
     }
-    
+
     return await query.orderBy(desc(jobs.createdAt));
   }
 
   async getJobsByBroker(brokerId: number): Promise<Job[]> {
     return await db
-      .select()
-      .from(jobs)
-      .where(eq(jobs.brokerId, brokerId))
-      .orderBy(desc(jobs.createdAt));
+        .select()
+        .from(jobs)
+        .where(eq(jobs.brokerId, brokerId))
+        .orderBy(desc(jobs.createdAt));
   }
 
   async createJob(insertJob: InsertJob): Promise<Job> {
@@ -212,10 +244,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateJob(id: number, updates: Partial<Job>): Promise<Job | undefined> {
     const [updated] = await db
-      .update(jobs)
-      .set(updates)
-      .where(eq(jobs.id, id))
-      .returning();
+        .update(jobs)
+        .set(updates)
+        .where(eq(jobs.id, id))
+        .returning();
     return updated;
   }
 
@@ -227,34 +259,34 @@ export class DatabaseStorage implements IStorage {
 
   async getConversationByUsers(user1Id: number, user2Id: number): Promise<Conversation | undefined> {
     const [conversation] = await db
-      .select()
-      .from(conversations)
-      .where(
-        or(
-          and(
-            eq(conversations.user1Id, user1Id),
-            eq(conversations.user2Id, user2Id)
-          ),
-          and(
-            eq(conversations.user1Id, user2Id),
-            eq(conversations.user2Id, user1Id)
-          )
-        )
-      );
+        .select()
+        .from(conversations)
+        .where(
+            or(
+                and(
+                    eq(conversations.user1Id, user1Id),
+                    eq(conversations.user2Id, user2Id)
+                ),
+                and(
+                    eq(conversations.user1Id, user2Id),
+                    eq(conversations.user2Id, user1Id)
+                )
+            )
+        );
     return conversation;
   }
 
   async getUserConversations(userId: number): Promise<Conversation[]> {
     return await db
-      .select()
-      .from(conversations)
-      .where(
-        or(
-          eq(conversations.user1Id, userId),
-          eq(conversations.user2Id, userId)
+        .select()
+        .from(conversations)
+        .where(
+            or(
+                eq(conversations.user1Id, userId),
+                eq(conversations.user2Id, userId)
+            )
         )
-      )
-      .orderBy(desc(conversations.lastMessageTime));
+        .orderBy(desc(conversations.lastMessageTime));
   }
 
   async createConversation(conversation: InsertConversation): Promise<Conversation> {
@@ -267,62 +299,62 @@ export class DatabaseStorage implements IStorage {
     if (!conversation) return [];
 
     return await db
-      .select()
-      .from(messages)
-      .where(
-        or(
-          and(
-            eq(messages.senderId, conversation.user1Id),
-            eq(messages.receiverId, conversation.user2Id)
-          ),
-          and(
-            eq(messages.senderId, conversation.user2Id),
-            eq(messages.receiverId, conversation.user1Id)
-          )
+        .select()
+        .from(messages)
+        .where(
+            or(
+                and(
+                    eq(messages.senderId, conversation.user1Id),
+                    eq(messages.receiverId, conversation.user2Id)
+                ),
+                and(
+                    eq(messages.senderId, conversation.user2Id),
+                    eq(messages.receiverId, conversation.user1Id)
+                )
+            )
         )
-      )
-      .orderBy(messages.createdAt);
+        .orderBy(messages.createdAt);
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
     const [newMessage] = await db.insert(messages).values(message).returning();
-    
+
     // Find or create conversation
     let conversation = await this.getConversationByUsers(message.senderId, message.receiverId);
-    
+
     if (!conversation) {
       conversation = await this.createConversation({
         user1Id: message.senderId,
         user2Id: message.receiverId
       });
     }
-    
+
     // Update conversation's lastMessageTime
     await db
-      .update(conversations)
-      .set({ lastMessageTime: newMessage.createdAt })
-      .where(eq(conversations.id, conversation.id));
-      
+        .update(conversations)
+        .set({ lastMessageTime: newMessage.createdAt })
+        .where(eq(conversations.id, conversation.id));
+
     return newMessage;
   }
 
   async markMessagesAsRead(conversationId: number, userId: number): Promise<void> {
     const conversation = await this.getConversation(conversationId);
     if (!conversation) return;
-    
+
     await db
-      .update(messages)
-      .set({ isRead: true })
-      .where(
-        and(
-          eq(messages.receiverId, userId),
-          eq(messages.isRead, false),
-          or(
-            eq(messages.senderId, conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id),
-            eq(messages.senderId, conversation.user2Id === userId ? conversation.user1Id : conversation.user2Id)
-          )
-        )
-      );
+        .update(messages)
+        .set({ isRead: true })
+        .where(
+            and(
+                eq(messages.receiverId, userId),
+                eq(messages.isRead, false),
+                or(
+                    eq(messages.senderId, conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id),
+                    eq(messages.senderId, conversation.user2Id === userId ? conversation.user1Id : conversation.user2Id)
+                )
+            )
+        );
   }
 
   // Booking operations
@@ -333,18 +365,18 @@ export class DatabaseStorage implements IStorage {
 
   async getBookingsByJob(jobId: number): Promise<Booking[]> {
     return await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.jobId, jobId))
-      .orderBy(desc(bookings.createdAt));
+        .select()
+        .from(bookings)
+        .where(eq(bookings.jobId, jobId))
+        .orderBy(desc(bookings.createdAt));
   }
 
   async getBookingsByTrucker(truckerId: number): Promise<Booking[]> {
     return await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.truckerId, truckerId))
-      .orderBy(desc(bookings.createdAt));
+        .select()
+        .from(bookings)
+        .where(eq(bookings.truckerId, truckerId))
+        .orderBy(desc(bookings.createdAt));
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
@@ -357,10 +389,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateBookingStatus(id: number, status: Booking['status']): Promise<Booking | undefined> {
     const [updated] = await db
-      .update(bookings)
-      .set({ status })
-      .where(eq(bookings.id, id))
-      .returning();
+        .update(bookings)
+        .set({ status })
+        .where(eq(bookings.id, id))
+        .returning();
     return updated;
   }
 }

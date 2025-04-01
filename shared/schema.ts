@@ -15,7 +15,9 @@ export const users = pgTable("users", {
   status: text("status", { enum: ["pending", "approved", "verified", "rejected"] }).default("pending").notNull(),
   verificationToken: text("verification_token"),
   verificationExpires: timestamp("verification_expires"),
+  verificationNotes: text("verificationNotes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 // Trucker profile table
@@ -142,10 +144,15 @@ export type InsertBooking = z.infer<typeof insertBookingSchema>;
 // Extended registration schemas
 export const truckerRegisterSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
+  companyName: z.string().min(1, "Company name is required"),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   zip: z.string().min(1, "ZIP code is required"),
+  bir2303: z.string().min(1, "BIR 2303 Certificate is required"),
+  businessPermit: z.string().min(1, "Business Permit is required"),
+  insurance: z.string().optional(),
+  portPermit: z.string().optional(),
 }).superRefine((data, ctx) => {
   // Check that password matches confirmPassword
   if (data.password !== data.confirmPassword) {
@@ -158,12 +165,17 @@ export const truckerRegisterSchema = insertUserSchema.extend({
 });
 
 export const brokerRegisterSchema = insertUserSchema.extend({
-  confirmPassword: z.string(), // Remove min length as it's checked in the refinement
+  confirmPassword: z.string(),
   companyName: z.string().min(1, "Company name is required"),
   companyAddress: z.string().min(1, "Company address is required"),
   companyCity: z.string().min(1, "Company city is required"),
   companyState: z.string().min(1, "Company state is required"),
   companyZip: z.string().min(1, "Company ZIP code is required"),
+  contactPosition: z.string().min(1, "Contact person position is required"),
+  dtiSec: z.string().min(1, "DTI/SEC Registration is required"),
+  bir2303: z.string().min(1, "BIR 2303 Certificate is required"),
+  businessPermit: z.string().min(1, "Business Permit is required"),
+  customsAccreditation: z.string().optional(),
 }).superRefine((data, ctx) => {
   // First check that password matches confirmPassword
   if (data.password !== data.confirmPassword) {
