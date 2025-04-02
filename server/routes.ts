@@ -1,14 +1,29 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { insertJobSchema, insertBookingSchema, insertMessageSchema, ApproveUserInput } from "@shared/schema";
+import { insertJobSchema, insertBookingSchema, insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
-import { sendApprovalEmail } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+
+  // Development-only route to view all verification tokens for testing
+  app.get('/api/dev/verification-tokens', async (req, res) => {
+    try {
+      const users = await storage.getUsersByStatus('pending');
+      const tokenInfo = users.map(user => ({
+        username: user.username,
+        email: user.email,
+        token: user.verificationToken,
+        verifyUrl: `${req.protocol}://${req.get('host')}/api/verify?token=${user.verificationToken}`
+      }));
+      res.json(tokenInfo);
+    } catch (error) {
+      res.status(500).json({ message: 'Error retrieving tokens', error });
+    }
+  });
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -17,15 +32,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     return res.status(401).json({ message: "Unauthorized" });
   };
-
-  // Middleware to check if user is admin
-  const isAdmin = (req: Request, res: Response, next: Function) => {
-    if (req.isAuthenticated() && req.user!.userType === "admin") {
-      return next();
-    }
-    return res.status(403).json({ message: "Forbidden" });
-  };
-
 
   // Routes for user profile
   app.get("/api/profile", isAuthenticated, async (req, res) => {
@@ -315,73 +321,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin endpoints for user management
-  app.get("/api/admin/pending-users", isAdmin, async (req, res, next) => {
-    try {
-      const pendingUsers = await storage.getUsersByStatus("pending");
-      res.json(pendingUsers);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get("/api/admin/all-users", isAdmin, async (req, res, next) => {
-    try {
-      const users = await storage.getAllUsers();
-      res.json(users);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get("/api/admin/approval-history", isAdmin, async (req, res, next) => {
-    try {
-      const history = await storage.getApprovalHistory();
-      res.json(history);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.post("/api/admin/approve-user", isAdmin, async (req, res, next) => {
-    try {
-      const { userId, approved, message } = req.body as ApproveUserInput;
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (approved) {
-        // Update user status to approved
-        await storage.updateUser(userId, {
-          status: "approved",
-          verificationNotes: "Approved by admin"
-        });
-
-        // Send approval email
-        await sendApprovalEmail(user.email, true);
-
-        res.status(200).json({ message: "User approved successfully" });
-      } else {
-        // Update user status to rejected
-        await storage.updateUser(userId, {
-          status: "rejected",
-          verificationNotes: message || "Rejected by admin"
-        });
-
-        // Send rejection email if a message was provided
-        if (message) {
-          await sendApprovalEmail(user.email, false, message);
-        }
-
-        res.status(200).json({ message: "User registration rejected" });
-      }
-    } catch (err) {
-      next(err);
-    }
-  });
-
   // Messaging routes
   app.get("/api/conversations", isAuthenticated, async (req, res) => {
     try {
@@ -480,6 +419,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: err.errors });
       }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Admin Routes - Only accessible to admin users
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (req.isAuthenticated() && req.user!.userType === "admin") {
+      return next();
+    }
+    return res.status(403).json({ message: "Admin access required" });
+  };
+
+  // Get all users
+  app.get("/api/admin/all-users", isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (err) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get pending truckers
+  app.get("/api/admin/pending-truckers", isAdmin, async (req, res) => {
+    try {
+      const pendingTruckers = await storage.getPendingTruckers();
+      res.json(pendingTruckers);
+    } catch (err) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get pending brokers
+  app.get("/api/admin/pending-brokers", isAdmin, async (req, res) => {
+    try {
+      const pendingBrokers = await storage.getPendingBrokers();
+      res.json(pendingBrokers);
+    } catch (err) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get admin action history
+  app.get("/api/admin/action-history", isAdmin, async (req, res) => {
+    try {
+      const adminId = req.user!.id;
+      const actions = await storage.getAdminActions(adminId);
+      res.json(actions);
+    } catch (err) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Approve or reject user
+  app.post("/api/admin/approve-user", isAdmin, async (req, res) => {
+    try {
+      const { userId, approved, message } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Update user status
+      const status = approved ? "approved" : "rejected";
+      const updatedUser = await storage.updateUser(userId, { status });
+
+      // Record admin action
+      await storage.createAdminAction({
+        adminId: req.user!.id,
+        userId,
+        action: approved ? "approve" : "reject",
+        reason: message
+      });
+
+      res.json({ success: true, user: updatedUser });
+    } catch (err) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get user profile details
+  app.get("/api/admin/user-profile/:userId", isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      let profile = null;
+      if (user.userType === "trucker") {
+        profile = await storage.getTruckerProfile(userId);
+      } else if (user.userType === "broker") {
+        profile = await storage.getBrokerProfile(userId);
+      }
+
+      res.json({
+        user,
+        profile
+      });
+    } catch (err) {
       res.status(500).json({ message: "Server error" });
     }
   });

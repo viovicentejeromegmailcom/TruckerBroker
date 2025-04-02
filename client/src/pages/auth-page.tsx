@@ -18,10 +18,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { loginSchema, truckerRegisterSchema, brokerRegisterSchema } from "@shared/schema";
+import { loginSchema } from "@shared/schema";
+import TruckerRegistrationForm from "@/components/auth/trucker-registration-form";
+import BrokerRegistrationForm from "@/components/auth/broker-registration-form";
 
 export default function AuthPage() {
-  const { user, loginMutation, truckerRegisterMutation, brokerRegisterMutation } = useAuth();
+  const { user, loginMutation } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("login");
   const [userType, setUserType] = useState<"trucker" | "broker">("trucker");
@@ -73,88 +75,6 @@ export default function AuthPage() {
 
   function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate(values);
-  }
-
-  // Trucker registration form
-  const truckerRegForm = useForm<z.infer<typeof truckerRegisterSchema>>({
-    resolver: zodResolver(truckerRegisterSchema),
-    defaultValues: {
-      userType: "trucker",
-      username: "",
-      password: "",
-      confirmPassword: "",
-      email: "",
-      firstName: "",
-      lastName: "",
-      phone: "",
-      address: "",
-      city: "",
-      state: "",
-      zip: "",
-    },
-  });
-
-  function onTruckerRegSubmit(values: z.infer<typeof truckerRegisterSchema>) {
-    truckerRegisterMutation.mutate(values);
-  }
-
-  // Broker registration form
-  const brokerRegForm = useForm<z.infer<typeof brokerRegisterSchema>>({
-    resolver: zodResolver(brokerRegisterSchema),
-    defaultValues: {
-      userType: "broker",
-      username: "",
-      password: "",
-      confirmPassword: "",
-      email: "",
-      firstName: "",
-      lastName: "",
-      phone: "",
-      companyName: "",
-      companyAddress: "",
-      companyCity: "",
-      companyState: "",
-      companyZip: "",
-    },
-  });
-
-  function onBrokerRegSubmit(values: z.infer<typeof brokerRegisterSchema>) {
-    // For debugging - log the form values and any validation errors
-    console.log("Broker registration form values:", values);
-    console.log("Form errors:", brokerRegForm.formState.errors);
-
-    try {
-      // Perform manual validation for critical fields
-      const validationErrors: Record<string, { message: string }> = {};
-
-      // Validate company name
-      if (!values.companyName || values.companyName.trim() === '') {
-        validationErrors.companyName = {
-          message: 'Company name is required'
-        };
-      }
-
-      // Check if we have any validation errors
-      if (Object.keys(validationErrors).length > 0) {
-        // Set all validation errors
-        Object.entries(validationErrors).forEach(([field, error]) => {
-          brokerRegForm.setError(field as any, error);
-        });
-        return;
-      }
-
-      // Log the valid data before submission
-      console.log("Submitting broker registration with valid data:", {
-        ...values,
-        password: "[REDACTED]",
-        confirmPassword: "[REDACTED]"
-      });
-
-      // Submit if validation passes
-      brokerRegisterMutation.mutate(values);
-    } catch (error) {
-      console.error("Error in broker registration form submission:", error);
-    }
   }
 
   return (
@@ -281,379 +201,9 @@ export default function AuthPage() {
                     </div>
 
                     {userType === "trucker" ? (
-                        <Form {...truckerRegForm}>
-                          <form onSubmit={truckerRegForm.handleSubmit(onTruckerRegSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                              <FormField
-                                  control={truckerRegForm.control}
-                                  name="firstName"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>First name</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="John" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={truckerRegForm.control}
-                                  name="lastName"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Last name</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="Doe" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                            </div>
-
-                            <FormField
-                                control={truckerRegForm.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Email</FormLabel>
-                                      <FormControl>
-                                        <Input type="email" placeholder="john.doe@example.com" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={truckerRegForm.control}
-                                name="phone"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Phone</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="(555) 123-4567" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={truckerRegForm.control}
-                                name="username"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Username</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="johndoe" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <FormField
-                                  control={truckerRegForm.control}
-                                  name="password"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Password</FormLabel>
-                                        <FormControl>
-                                          <Input type="password" placeholder="••••••••" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={truckerRegForm.control}
-                                  name="confirmPassword"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Confirm Password</FormLabel>
-                                        <FormControl>
-                                          <Input type="password" placeholder="••••••••" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                            </div>
-
-                            <FormField
-                                control={truckerRegForm.control}
-                                name="address"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Address</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="123 Main St" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="grid grid-cols-3 gap-4">
-                              <FormField
-                                  control={truckerRegForm.control}
-                                  name="city"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>City</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="Los Angeles" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={truckerRegForm.control}
-                                  name="state"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>State</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="CA" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={truckerRegForm.control}
-                                  name="zip"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>ZIP</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="90001" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                            </div>
-
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={truckerRegisterMutation.isPending}
-                            >
-                              {truckerRegisterMutation.isPending ? "Creating account..." : "Create account"}
-                            </Button>
-                          </form>
-                        </Form>
+                        <TruckerRegistrationForm />
                     ) : (
-                        <Form {...brokerRegForm}>
-                          {/* Debugging: Display the current companyName value */}
-                          <div className="text-xs text-gray-500">
-                            Current company name value: "{brokerRegForm.watch("companyName")}"
-                          </div>
-                          <form onSubmit={brokerRegForm.handleSubmit(onBrokerRegSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                              <FormField
-                                  control={brokerRegForm.control}
-                                  name="firstName"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>First name</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="John" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={brokerRegForm.control}
-                                  name="lastName"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Last name</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="Doe" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                            </div>
-
-                            <FormField
-                                control={brokerRegForm.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Email</FormLabel>
-                                      <FormControl>
-                                        <Input type="email" placeholder="john.doe@example.com" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={brokerRegForm.control}
-                                name="phone"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Phone</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="(555) 123-4567" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={brokerRegForm.control}
-                                name="username"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Username</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="johndoe" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <FormField
-                                  control={brokerRegForm.control}
-                                  name="password"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Password</FormLabel>
-                                        <FormControl>
-                                          <Input type="password" placeholder="••••••••" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={brokerRegForm.control}
-                                  name="confirmPassword"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Confirm Password</FormLabel>
-                                        <FormControl>
-                                          <Input type="password" placeholder="••••••••" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <label htmlFor="company-name" className="text-sm font-medium">
-                                Company Name
-                              </label>
-                              <input
-                                  id="company-name"
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                  placeholder="Acme Shipping Inc."
-                                  value={brokerRegForm.watch("companyName") || ""}
-                                  onChange={(e) => {
-                                    const newValue = e.target.value;
-                                    console.log("Company name changing to:", newValue);
-                                    brokerRegForm.setValue("companyName", newValue, {
-                                      shouldValidate: true,
-                                      shouldDirty: true,
-                                      shouldTouch: true
-                                    });
-                                  }}
-                              />
-                              {brokerRegForm.formState.errors.companyName && (
-                                  <p className="text-sm font-medium text-destructive">
-                                    {brokerRegForm.formState.errors.companyName.message}
-                                  </p>
-                              )}
-                            </div>
-
-                            <FormField
-                                control={brokerRegForm.control}
-                                name="companyAddress"
-                                render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Company Address</FormLabel>
-                                      <FormControl>
-                                        <Input placeholder="123 Business Ave" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="grid grid-cols-3 gap-4">
-                              <FormField
-                                  control={brokerRegForm.control}
-                                  name="companyCity"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>City</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="Chicago" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={brokerRegForm.control}
-                                  name="companyState"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>State</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="IL" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-
-                              <FormField
-                                  control={brokerRegForm.control}
-                                  name="companyZip"
-                                  render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>ZIP</FormLabel>
-                                        <FormControl>
-                                          <Input placeholder="60601" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                      </FormItem>
-                                  )}
-                              />
-                            </div>
-
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={brokerRegisterMutation.isPending}
-                            >
-                              {brokerRegisterMutation.isPending ? "Creating account..." : "Create account"}
-                            </Button>
-                          </form>
-                        </Form>
+                        <BrokerRegistrationForm />
                     )}
                   </TabsContent>
                 </Tabs>
@@ -661,37 +211,43 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <div className="hidden lg:block relative w-0 flex-1">
-            <img
-                className="absolute inset-0 h-full w-full object-cover"
-                src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?ixlib=rb-1.2.1&auto=format&fit=crop&w=2255&q=80"
-                alt="Trucks on the road"
-            />
-            <div className="absolute inset-0 bg-primary-700 mix-blend-multiply opacity-50"></div>
-            <div className="absolute inset-0 flex flex-col justify-center p-12 text-white">
-              <h2 className="text-4xl font-bold mb-4">TruckLink</h2>
-              <p className="text-xl">
-                {activeTab === "login"
-                    ? "Sign in to connect with shippers and truckers across the country."
-                    : userType === "trucker"
-                        ? "Register as a trucker to find shipping jobs and grow your business."
-                        : "Register as a broker to find reliable truckers and streamline your logistics."
-                }
+          <div className="hidden lg:block relative w-0 flex-1 bg-gradient-to-br from-blue-500 to-indigo-600">
+            <div className="absolute inset-0 flex flex-col justify-center items-center p-12 text-white">
+              <h2 className="text-4xl font-bold mb-6">
+                Truck Management Portal
+              </h2>
+              <p className="text-xl max-w-2xl text-center">
+                Connect with trusted brokers and find the best shipping deals for your business.
               </p>
-              <ul className="mt-8 space-y-2">
-                <li className="flex items-center">
-                  <span className="mr-2 text-green-300">✓</span>
-                  Simplified logistics management
-                </li>
-                <li className="flex items-center">
-                  <span className="mr-2 text-green-300">✓</span>
-                  Secure messaging and bookings
-                </li>
-                <li className="flex items-center">
-                  <span className="mr-2 text-green-300">✓</span>
-                  Access nationwide shipping opportunities
-                </li>
-              </ul>
+              <div className="mt-12 grid grid-cols-3 gap-8 max-w-3xl">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold mb-1">Verified Shippers</h3>
+                  <p className="text-sm opacity-80">All brokers are verified for credibility and reliability</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold mb-1">Real-time Tracking</h3>
+                  <p className="text-sm opacity-80">Monitor your shipments in real-time across the country</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold mb-1">Secure Payments</h3>
+                  <p className="text-sm opacity-80">Secure payment processing with protection guarantees</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -15,24 +15,42 @@ export const users = pgTable("users", {
   status: text("status", { enum: ["pending", "approved", "verified", "rejected"] }).default("pending").notNull(),
   verificationToken: text("verification_token"),
   verificationExpires: timestamp("verification_expires"),
-  verificationNotes: text("verificationNotes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 // Trucker profile table
 export const truckerProfiles = pgTable("trucker_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
+  companyName: text("company_name").notNull(),
   address: text("address").notNull(),
   city: text("city").notNull(),
   state: text("state").notNull(),
   zip: text("zip").notNull(),
+  contactNumber: text("contact_number").notNull(),
+  businessEmail: text("business_email").notNull(),
+
+  // Legal & Compliance Documents
+  bir2303Certificate: text("bir_2303_certificate"),
+  businessPermit: text("business_permit"),
+  insuranceCoverage: text("insurance_coverage"),
+  permitToOperate: text("permit_to_operate"),
+
+  // Vehicle Information
+  vehicles: json("vehicles").$type<{
+    vehicleType: string;
+    vehicleMake: string;
+    plateNumber: string;
+    weightCapacity: string;
+    truckDocuments: string;
+  }[]>().default([]),
+
+  // Additional fields
+  serviceAreas: json("service_areas").$type<string[]>(),
   licensePlate: text("license_plate"),
   licenseNumber: text("license_number"),
   truckType: text("truck_type"),
   truckCapacity: text("truck_capacity"),
-  serviceAreas: json("service_areas").$type<string[]>(),
   available: boolean("available").default(true),
 });
 
@@ -40,11 +58,27 @@ export const truckerProfiles = pgTable("trucker_profiles", {
 export const brokerProfiles = pgTable("broker_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
+
+  // Basic Information
   companyName: text("company_name").notNull(),
   companyAddress: text("company_address").notNull(),
   companyCity: text("company_city").notNull(),
   companyState: text("company_state").notNull(),
   companyZip: text("company_zip").notNull(),
+  contactNumber: text("contact_number").notNull(),
+  businessEmail: text("business_email").notNull(),
+
+  // Contact Person Information
+  contactPersonName: text("contact_person_name").notNull(),
+  contactPersonPosition: text("contact_person_position").notNull(),
+
+  // Legal & Compliance Documents
+  dtiSecRegistration: text("dti_sec_registration"),
+  bir2303Certificate: text("bir_2303_certificate"),
+  mayorsPermit: text("mayors_permit"),
+  bocAccreditation: text("boc_accreditation"),
+
+  // Additional fields
   businessType: text("business_type"),
   taxId: text("tax_id"),
 });
@@ -97,6 +131,16 @@ export const bookings = pgTable("bookings", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Admin Action History table
+export const adminActions = pgTable("admin_actions", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id").notNull().references(() => users.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  action: text("action", { enum: ["approve", "reject"] }).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Schemas
 export const insertUserSchema = createInsertSchema(users)
     .omit({ id: true, createdAt: true, verificationToken: true, verificationExpires: true });
@@ -118,6 +162,9 @@ export const insertConversationSchema = createInsertSchema(conversations)
 
 export const insertBookingSchema = createInsertSchema(bookings)
     .omit({ id: true, status: true, createdAt: true });
+
+export const insertAdminActionSchema = createInsertSchema(adminActions)
+    .omit({ id: true, createdAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -141,18 +188,40 @@ export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 
+export type AdminAction = typeof adminActions.$inferSelect;
+export type InsertAdminAction = z.infer<typeof insertAdminActionSchema>;
+
+// Define vehicle type for truckers
+export const vehicleSchema = z.object({
+  vehicleType: z.string().min(1, "Vehicle type is required"),
+  vehicleMake: z.string().min(1, "Vehicle make is required"),
+  plateNumber: z.string().min(1, "Plate number is required"),
+  weightCapacity: z.string().min(1, "Weight capacity is required"),
+  truckDocuments: z.string().optional(),
+});
+
+export type Vehicle = z.infer<typeof vehicleSchema>;
+
 // Extended registration schemas
 export const truckerRegisterSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
+  // Basic Information
   companyName: z.string().min(1, "Company name is required"),
-  address: z.string().min(1, "Address is required"),
+  address: z.string().min(1, "Business address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   zip: z.string().min(1, "ZIP code is required"),
-  bir2303: z.string().min(1, "BIR 2303 Certificate is required"),
-  businessPermit: z.string().min(1, "Business Permit is required"),
-  insurance: z.string().optional(),
-  portPermit: z.string().optional(),
+  contactNumber: z.string().min(1, "Contact number is required"),
+  businessEmail: z.string().email("Invalid email address"),
+
+  // Legal & Compliance Documents
+  bir2303Certificate: z.string().optional(),
+  businessPermit: z.string().optional(),
+  insuranceCoverage: z.string().optional(),
+  permitToOperate: z.string().optional(),
+
+  // Vehicle Information
+  vehicles: z.array(vehicleSchema).optional(),
 }).superRefine((data, ctx) => {
   // Check that password matches confirmPassword
   if (data.password !== data.confirmPassword) {
@@ -166,32 +235,32 @@ export const truckerRegisterSchema = insertUserSchema.extend({
 
 export const brokerRegisterSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
+
+  // Basic Information
   companyName: z.string().min(1, "Company name is required"),
-  companyAddress: z.string().min(1, "Company address is required"),
-  companyCity: z.string().min(1, "Company city is required"),
-  companyState: z.string().min(1, "Company state is required"),
-  companyZip: z.string().min(1, "Company ZIP code is required"),
-  contactPosition: z.string().min(1, "Contact person position is required"),
-  dtiSec: z.string().min(1, "DTI/SEC Registration is required"),
-  bir2303: z.string().min(1, "BIR 2303 Certificate is required"),
-  businessPermit: z.string().min(1, "Business Permit is required"),
-  customsAccreditation: z.string().optional(),
+  companyAddress: z.string().min(1, "Business address is required"),
+  companyCity: z.string().min(1, "City is required"),
+  companyState: z.string().min(1, "State is required"),
+  companyZip: z.string().min(1, "ZIP code is required"),
+  contactNumber: z.string().min(1, "Contact number is required"),
+  businessEmail: z.string().email("Invalid email address"),
+
+  // Contact Person Information
+  contactPersonName: z.string().min(1, "Contact person name is required"),
+  contactPersonPosition: z.string().min(1, "Contact person position is required"),
+
+  // Legal & Compliance Documents
+  dtiSecRegistration: z.string().optional(),
+  bir2303Certificate: z.string().optional(),
+  mayorsPermit: z.string().optional(),
+  bocAccreditation: z.string().optional(),
 }).superRefine((data, ctx) => {
-  // First check that password matches confirmPassword
+  // Check that password matches confirmPassword
   if (data.password !== data.confirmPassword) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Passwords do not match",
       path: ["confirmPassword"],
-    });
-  }
-
-  // Custom check for companyName
-  if (!data.companyName || data.companyName.trim() === '') {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Company name is required",
-      path: ["companyName"],
     });
   }
 });

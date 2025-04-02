@@ -6,8 +6,9 @@ import {
   Message, InsertMessage,
   Conversation, InsertConversation,
   Booking, InsertBooking,
+  AdminAction, InsertAdminAction,
   users, truckerProfiles, brokerProfiles, jobs,
-  conversations, messages, bookings
+  conversations, messages, bookings, adminActions
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -27,8 +28,9 @@ export interface IStorage {
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
   getUsersByStatus(status: User['status']): Promise<User[]>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
-  getAllUsers(): Promise<User[]>;
-  getApprovalHistory(): Promise<any[]>;
+  getAllUsers(excludeUserId?: number): Promise<User[]>;
+  getPendingTruckers(): Promise<User[]>;
+  getPendingBrokers(): Promise<User[]>;
 
   // Trucker Profile operations
   getTruckerProfile(userId: number): Promise<TruckerProfile | undefined>;
@@ -62,6 +64,10 @@ export interface IStorage {
   getBookingsByTrucker(truckerId: number): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: number, status: Booking['status']): Promise<Booking | undefined>;
+
+  // Admin actions operations
+  getAdminActions(adminId: number): Promise<AdminAction[]>;
+  createAdminAction(action: InsertAdminAction): Promise<AdminAction>;
 
   // Session store
   sessionStore: any;
@@ -126,34 +132,44 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getAllUsers(): Promise<User[]> {
-    return await db
-        .select()
-        .from(users)
-        .orderBy(desc(users.createdAt));
+  async getAllUsers(excludeUserId?: number): Promise<User[]> {
+    // Using a simpler approach to avoid Drizzle typing issues
+    const allUsers = await db.select().from(users).orderBy(users.createdAt);
+
+    // Exclude a specific user if requested (e.g., the current admin)
+    if (excludeUserId) {
+      return allUsers.filter(user => user.id !== excludeUserId);
+    }
+
+    return allUsers;
   }
 
-  async getApprovalHistory(): Promise<any[]> {
-    // This is a placeholder implementation
-    // You should create a proper schema for approval history in shared/schema.ts
-    // For now, we'll query users with status changes
-    return await db
-        .select({
-          id: users.id,
-          userName: users.username,
-          userEmail: users.email,
-          approved: users.status,
-          createdAt: users.updatedAt,
-          message: users.verificationNotes
-        })
+  async getPendingTruckers(): Promise<User[]> {
+    const pendingUsers = await db
+        .select()
         .from(users)
         .where(
-            or(
-                eq(users.status, "approved"),
-                eq(users.status, "rejected")
+            and(
+                eq(users.status, "verified"),
+                eq(users.userType, "trucker")
             )
         )
-        .orderBy(desc(users.updatedAt));
+        .orderBy(users.createdAt);
+    return pendingUsers;
+  }
+
+  async getPendingBrokers(): Promise<User[]> {
+    const pendingUsers = await db
+        .select()
+        .from(users)
+        .where(
+            and(
+                eq(users.status, "verified"),
+                eq(users.userType, "broker")
+            )
+        )
+        .orderBy(users.createdAt);
+    return pendingUsers;
   }
 
   // Trucker Profile operations
@@ -394,6 +410,20 @@ export class DatabaseStorage implements IStorage {
         .where(eq(bookings.id, id))
         .returning();
     return updated;
+  }
+
+  // Admin action operations
+  async getAdminActions(adminId: number): Promise<AdminAction[]> {
+    return await db
+        .select()
+        .from(adminActions)
+        .where(eq(adminActions.adminId, adminId))
+        .orderBy(desc(adminActions.createdAt));
+  }
+
+  async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
+    const [adminAction] = await db.insert(adminActions).values(action).returning();
+    return adminAction;
   }
 }
 

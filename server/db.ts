@@ -20,18 +20,18 @@ let poolConfig: pg.PoolConfig;
 
 // if (useReplitConfig) {
 //   // Replit environment - use DATABASE_URL
-//   if (!process.env.REACT_APP_DATABASE_URL) {
-//     throw new Error("REACT_APP_DATABASE_URL must be set when running in Replit environment");
+//   if (!process.env.DATABASE_URL) {
+//     throw new Error("DATABASE_URL must be set when running in Replit environment");
 //   }
 //
-//   poolConfig = { connectionString: process.env.REACT_APP_DATABASE_URL };
+//   poolConfig = { connectionString: process.env.DATABASE_URL };
 //   console.log("Connecting to Replit database...");
 // } else {
 
   // Local environment - can use either connection string or individual parameters
-  if (process.env.REACT_APP_DATABASE_URL) {
+  if (process.env.DATABASE_URL) {
     // If DATABASE_URL is provided in .env file, use it
-    poolConfig = { connectionString: process.env.REACT_APP_DATABASE_URL };
+    poolConfig = { connectionString: process.env.DATABASE_URL };
     console.log("Connecting to database using connection string...");
   } else {
     // Otherwise, try to use individual connection parameters

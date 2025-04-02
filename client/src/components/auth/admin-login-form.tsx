@@ -79,12 +79,35 @@ export default function AdminLoginForm() {
         },
     });
 
-    // Handle login submission
+    // Handle admin login submission (uses the admin-specific endpoint)
     async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
         try {
-            await loginMutation.mutateAsync(values);
-        } catch (error) {
-            console.error("Login error:", error);
+            setIsSubmitting(true);
+            const response = await fetch("/api/admin/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(values),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || "Login failed");
+            }
+
+            // Get user data and redirect to admin dashboard
+            const userData = await response.json();
+            window.location.href = "/admin"; // Redirect to admin dashboard
+        } catch (error: any) {
+            toast({
+                title: "Login failed",
+                description: error.message || "An error occurred during login",
+                variant: "destructive",
+            });
+            console.error("Admin login error:", error);
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -196,9 +219,9 @@ export default function AdminLoginForm() {
                                 <Button
                                     type="submit"
                                     className="w-full mt-2"
-                                    disabled={loginMutation.isPending}
+                                    disabled={isSubmitting}
                                 >
-                                    {loginMutation.isPending ? (
+                                    {isSubmitting ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                             Logging in...
