@@ -29,13 +29,13 @@ export const truckerProfiles = pgTable("trucker_profiles", {
   zip: text("zip").notNull(),
   contactNumber: text("contact_number").notNull(),
   businessEmail: text("business_email").notNull(),
-
+  
   // Legal & Compliance Documents
   bir2303Certificate: text("bir_2303_certificate"),
   businessPermit: text("business_permit"),
   insuranceCoverage: text("insurance_coverage"),
   permitToOperate: text("permit_to_operate"),
-
+  
   // Vehicle Information
   vehicles: json("vehicles").$type<{
     vehicleType: string;
@@ -44,7 +44,7 @@ export const truckerProfiles = pgTable("trucker_profiles", {
     weightCapacity: string;
     truckDocuments: string;
   }[]>().default([]),
-
+  
   // Additional fields
   serviceAreas: json("service_areas").$type<string[]>(),
   licensePlate: text("license_plate"),
@@ -58,7 +58,7 @@ export const truckerProfiles = pgTable("trucker_profiles", {
 export const brokerProfiles = pgTable("broker_profiles", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
-
+  
   // Basic Information
   companyName: text("company_name").notNull(),
   companyAddress: text("company_address").notNull(),
@@ -67,17 +67,17 @@ export const brokerProfiles = pgTable("broker_profiles", {
   companyZip: text("company_zip").notNull(),
   contactNumber: text("contact_number").notNull(),
   businessEmail: text("business_email").notNull(),
-
+  
   // Contact Person Information
   contactPersonName: text("contact_person_name").notNull(),
   contactPersonPosition: text("contact_person_position").notNull(),
-
+  
   // Legal & Compliance Documents
   dtiSecRegistration: text("dti_sec_registration"),
   bir2303Certificate: text("bir_2303_certificate"),
   mayorsPermit: text("mayors_permit"),
   bocAccreditation: text("boc_accreditation"),
-
+  
   // Additional fields
   businessType: text("business_type"),
   taxId: text("tax_id"),
@@ -213,13 +213,13 @@ export const truckerRegisterSchema = insertUserSchema.extend({
   zip: z.string().min(1, "ZIP code is required"),
   contactNumber: z.string().min(1, "Contact number is required"),
   businessEmail: z.string().email("Invalid email address"),
-
+  
   // Legal & Compliance Documents
   bir2303Certificate: z.string().optional(),
   businessPermit: z.string().optional(),
   insuranceCoverage: z.string().optional(),
   permitToOperate: z.string().optional(),
-
+  
   // Vehicle Information
   vehicles: z.array(vehicleSchema).optional(),
 }).superRefine((data, ctx) => {
@@ -235,7 +235,7 @@ export const truckerRegisterSchema = insertUserSchema.extend({
 
 export const brokerRegisterSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
-
+  
   // Basic Information
   companyName: z.string().min(1, "Company name is required"),
   companyAddress: z.string().min(1, "Business address is required"),
@@ -244,11 +244,11 @@ export const brokerRegisterSchema = insertUserSchema.extend({
   companyZip: z.string().min(1, "ZIP code is required"),
   contactNumber: z.string().min(1, "Contact number is required"),
   businessEmail: z.string().email("Invalid email address"),
-
+  
   // Contact Person Information
   contactPersonName: z.string().min(1, "Contact person name is required"),
   contactPersonPosition: z.string().min(1, "Contact person position is required"),
-
+  
   // Legal & Compliance Documents
   dtiSecRegistration: z.string().optional(),
   bir2303Certificate: z.string().optional(),

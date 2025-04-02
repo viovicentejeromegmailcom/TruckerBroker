@@ -8,25 +8,10 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// // Check if running in Replit (will have a REPL_ID environment variable)
-// // For local testing, we'll force local mode with an environment variable
-// const isReplit = !!process.env.REPL_ID;
-// const forceLocalMode = process.env.FORCE_LOCAL_MODE === 'true';
-
-// // If we're forcing local mode for testing, override the Replit detection
-// const useReplitConfig = isReplit && !forceLocalMode;
 
 let poolConfig: pg.PoolConfig;
 
-// if (useReplitConfig) {
-//   // Replit environment - use DATABASE_URL
-//   if (!process.env.DATABASE_URL) {
-//     throw new Error("DATABASE_URL must be set when running in Replit environment");
-//   }
-//
-//   poolConfig = { connectionString: process.env.DATABASE_URL };
-//   console.log("Connecting to Replit database...");
-// } else {
+
 
   // Local environment - can use either connection string or individual parameters
   if (process.env.DATABASE_URL) {
@@ -54,17 +39,14 @@ pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Database connection error:', err.message);
     console.error('Please check your database connection settings in your .env file');
-
+    
     // For debugging connection issues
     console.log('Connection config:', {
-      // isReplit,
-      // forceLocalMode,
-      // useReplitConfig,
       host: poolConfig.host || 'using connection string',
       database: poolConfig.database || 'using connection string',
       user: poolConfig.user || 'using connection string'
     });
-
+    
     // Don't throw error here to allow application to start even with DB issues
     // This allows for easier debugging
   } else {

@@ -20,58 +20,76 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 // Custom AdminProtectedRoute component that only allows admin users
-function AdminProtectedRoute({ component: Component, ...rest }: any) {
-    const { user, isLoading } = useAuth();
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        );
-    }
-
-    if (!user) {
-        return <Redirect to="/admin/auth" />;
-    }
-
-    if (user.userType !== "admin") {
-        return <Redirect to="/" />;
-    }
-
-    return <Component {...rest} />;
+function AdminProtectedRoute({ 
+  path, 
+  component: Component
+}: {
+  path: string;
+  component: () => React.JSX.Element;
+}) {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <Route path={path}>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Route>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <Route path={path}>
+        <Redirect to="/admin/auth" />
+      </Route>
+    );
+  }
+  
+  if (user.userType !== "admin") {
+    return (
+      <Route path={path}>
+        <Redirect to="/" />
+      </Route>
+    );
+  }
+  
+  return <Route path={path} component={Component} />;
 }
 
 function Router() {
-    return (
-        <Switch>
-            <Route path="/" component={HomePage} />
-            <Route path="/auth" component={AuthPage} />
-            <Route path="/admin/auth" component={AdminAuth} />
-            <Route path="/registration-success" component={RegistrationSuccess} />
-            <AdminProtectedRoute path="/admin" component={AdminDashboard} />
-
-            <ProtectedRoute path="/trucker/dashboard" component={TruckerDashboard} />
-            <ProtectedRoute path="/broker/dashboard" component={BrokerDashboard} />
-            <ProtectedRoute path="/jobs" component={JobSearch} />
-            <ProtectedRoute path="/jobs/:id" component={JobDetails} />
-            <ProtectedRoute path="/post-job" component={PostJob} />
-            <ProtectedRoute path="/messages" component={Messages} />
-            <ProtectedRoute path="/profile" component={Profile} />
-            <Route component={NotFound} />
-        </Switch>
-    );
+  return (
+    <Switch>
+      <Route path="/" component={HomePage} />
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/admin/auth" component={AdminAuth} />
+      <Route path="/registration-success" component={RegistrationSuccess} />
+      <AdminProtectedRoute path="/admin" component={AdminDashboard} />
+      
+      <ProtectedRoute path="/trucker/dashboard" component={TruckerDashboard} />
+      <ProtectedRoute path="/broker/dashboard" component={BrokerDashboard} />
+      <ProtectedRoute path="/jobs" component={JobSearch} />
+      <ProtectedRoute path="/jobs/:id" component={JobDetails} />
+      <ProtectedRoute path="/post-job" component={PostJob} />
+      <ProtectedRoute path="/messages" component={Messages} />
+      <ProtectedRoute path="/profile" component={Profile} />
+      <Route path="/:rest*">
+        {() => <NotFound />}
+      </Route>
+    </Switch>
+  );
 }
 
 function App() {
-    return (
-        <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-                <Router />
-                <Toaster />
-            </AuthProvider>
-        </QueryClientProvider>
-    );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
 }
 
 export default App;
